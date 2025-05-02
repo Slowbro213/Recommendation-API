@@ -19,10 +19,13 @@ async fn main() -> std::io::Result<()> {
     let base_url = env::var("BASE_URL").unwrap_or_else(|_| "http://localhost:8080".into());
     let port = env::var("RUST_API_PORT").unwrap_or_else(|_| "8080".into()).parse::<u16>().unwrap_or(8080);
 
+    let lsh_service = services::lsh_service::LSHService::new(10, 5, 128);
+
     HttpServer::new(move || {
         App::new()
             .app_data(web::Data::new(redis_service.clone()))
-            .service(routes::kv_routes::kv_routes())
+            .app_data(web::Data::new(lsh_service.clone()))
+            .service(routes::all())
     })
     .bind(format!("{}:{}", base_url, port))?
     .run()

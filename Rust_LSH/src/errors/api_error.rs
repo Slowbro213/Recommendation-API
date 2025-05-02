@@ -9,6 +9,8 @@ pub enum ApiError {
     NotFound(String),
     #[error("Bad request: {0}")]
     BadRequest(String),
+    #[error("Internal server error: {0}")]
+    InternalServerError(String),
 }
 
 impl ResponseError for ApiError {
@@ -17,6 +19,7 @@ impl ResponseError for ApiError {
             ApiError::RedisError(msg) => HttpResponse::InternalServerError().json(msg),
             ApiError::NotFound(msg) => HttpResponse::NotFound().json(msg),
             ApiError::BadRequest(msg) => HttpResponse::BadRequest().json(msg),
+            ApiError::InternalServerError(msg) => HttpResponse::InternalServerError().json(msg),
         }
     }
 }
