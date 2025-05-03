@@ -10,7 +10,6 @@ pub struct LSHService {
 impl LSHService {
     pub fn new(n_projections: usize, n_hash_tables: usize, dim: usize) -> Self {
         let lsh = LshMem::new(n_projections, n_hash_tables, dim)
-            .seed(31)
             .srp()
             .unwrap();
         Self {

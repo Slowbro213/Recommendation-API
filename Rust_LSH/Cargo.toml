@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 actix-web = "4.10.2"
+colored = "3.0.0"
 dotenv = "0.15.0"
 lsh-rs = { git = "https://github.com/ritchie46/lsh-rs.git", branch = "master" }
 redis = { version = "0.23", features = ["tokio-comp"] }

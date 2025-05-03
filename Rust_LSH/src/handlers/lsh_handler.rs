@@ -13,7 +13,7 @@ pub async fn add(
 ) -> Result<HttpResponse, ApiError> {
     let vecs = vectors.into_inner();
     lsh.add(&vecs)
-        .map_err(|e| ApiError::InternalServerError(format!("Failed to add vectors: {}", e)))?;
+        .map_err(|e| ApiError::InternalServerError(format!("{}", e)))?;
     Ok(HttpResponse::Ok().json("Vectors added"))
 }
 
@@ -25,7 +25,7 @@ pub async fn query(
 ) -> Result<HttpResponse, ApiError> {
     let results = lsh
         .query(&query, params.n_results)
-        .map_err(|e| ApiError::InternalServerError(format!("Query failed: {}", e)))?;
+        .map_err(|e| ApiError::InternalServerError(format!("{}",e)))?;
     Ok(HttpResponse::Ok().json(results))
 }
 
