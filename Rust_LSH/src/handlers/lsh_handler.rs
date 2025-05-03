@@ -1,24 +1,31 @@
 use actix_web::{web, HttpResponse};
 use crate::{errors::ApiError, services::lsh_service::LSHService};
+use serde::Deserialize;
 
+#[derive(Deserialize)]
+pub struct QueryParams {
+    pub n_results: usize,
+}
 
-
-pub fn add(
+pub async fn add(
     lsh: web::Data<LSHService>,
     vectors: web::Json<Vec<Vec<f32>>>,
 ) -> Result<HttpResponse, ApiError> {
-    lsh.add(&vectors).map_err(|e| ApiError::InternalServerError(format!("Failed to add vectors: {}", e)))?;
+    let vecs = vectors.into_inner();
+    lsh.add(&vecs)
+        .map_err(|e| ApiError::InternalServerError(format!("Failed to add vectors: {}", e)))?;
     Ok(HttpResponse::Ok().json("Vectors added"))
 }
 
 
-
-pub fn query(
+pub async fn query(
     lsh: web::Data<LSHService>,
     query: web::Json<Vec<f32>>,
-    n_results: web::Query<usize>,
+    params: web::Query<QueryParams>,
 ) -> Result<HttpResponse, ApiError> {
-    let lsh = lsh;
-    let results = lsh.query(&query, *n_results).map_err(|e| ApiError::InternalServerError(format!("Query failed: {}", e)))?;
+    let results = lsh
+        .query(&query, params.n_results)
+        .map_err(|e| ApiError::InternalServerError(format!("Query failed: {}", e)))?;
     Ok(HttpResponse::Ok().json(results))
 }
+
