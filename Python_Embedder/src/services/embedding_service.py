@@ -12,3 +12,4 @@ def store_embeddings(redis_client, post_ids: list[str], texts: list[str], embedd
     for post_id, text, embedding in zip(post_ids, texts, embeddings):
         redis_client.set(f"post:{post_id}", text)
         redis_client.set(f"embedding:post:{post_id}", json.dumps(embedding))
+        redis_client.publish("new_embedding", post_id)
