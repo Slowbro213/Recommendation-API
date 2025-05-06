@@ -4,6 +4,7 @@ from redis import asyncio as aioredis  # Use async Redis client
 import asyncio
 import signal
 import sys
+import os
 
 app = FastAPI()
 app.include_router(embeddings_router, prefix="/embeddings", tags=["embeddings"])
@@ -15,7 +16,7 @@ async def handle_pubsub_messages():
     try:
         pubsub = redis_client.pubsub()
         await pubsub.subscribe("new_embedding")
-        
+
         while True:
             message = await pubsub.get_message(ignore_subscribe_messages=True, timeout=1.0)
             if message:
@@ -29,6 +30,27 @@ async def handle_pubsub_messages():
         await pubsub.unsubscribe()
         await pubsub.close()
 
+
+async def listen_for_shutdown():
+    try:
+        pubsub = redis_client.pubsub()
+        await pubsub.subscribe("shutdown")
+
+        while True:
+            message = await pubsub.get_message(ignore_subscribe_messages=True, timeout=1.0)
+            if message:
+                #shutdown the server 
+                os.kill(os.getpid(), signal.SIGINT)
+    except asyncio.CancelledError:
+        print("PubSub task cancelled")
+    except Exception as e:
+        print(f"PubSub error: {e}")
+    finally:
+        await pubsub.unsubscribe()
+        await pubsub.close()
+
+
+
 async def graceful_shutdown():
     print("Shutting down gracefully...")
     await redis_client.publish("shutdown", "shutdown")
@@ -38,6 +60,7 @@ async def graceful_shutdown():
 async def startup_event():
     # Store the task to cancel it later
     app.state.pubsub_task = asyncio.create_task(handle_pubsub_messages())
+    app.state.shutdown_task = asyncio.create_task(listen_for_shutdown())
 
 @app.on_event("shutdown")
 async def shutdown_event():

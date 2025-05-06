@@ -28,15 +28,20 @@ impl LSHService {
         Ok(())
     }
 
-    pub fn query(&self, query: &[f32], n_results: usize) -> Result<Vec<usize>, ApiError> {
-        let locked = self
-            .lsh
-            .lock()
-            .map_err(|_| ApiError::InternalServerError("LSH mutex poisoned".to_string()))?;
-        let ids_u32 = locked
-            .query_bucket_ids(query)
-            .map_err(|e| ApiError::InternalServerError(format!("Query failed: {}", e)))?;
+    pub fn query(&self, query: &[f32], n_results: usize) -> Result<Vec<Vec<f32>>, ApiError> {
+    let locked = self
+        .lsh
+        .lock()
+        .map_err(|_| ApiError::InternalServerError("LSH mutex poisoned".to_string()))?;
+    let ids_u32 = locked
+        .query_bucket(query)
+        .map_err(|e| ApiError::InternalServerError(format!("Query failed: {}", e)))?;
 
-        Ok(ids_u32.into_iter().map(|i| i as usize).take(n_results).collect())
-    }
+    // Convert Vec<&Vec<f32>> into Vec<Vec<f32>> by cloning each inner vector
+    Ok(ids_u32
+        .into_iter()
+        .take(n_results)
+        .map(|v| v.clone())  // Clone each inner Vec<f32>
+        .collect())
+}
 }

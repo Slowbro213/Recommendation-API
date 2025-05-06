@@ -1,0 +1,23 @@
+{
+  "items": [
+    { "post_id": "0", "text": "The weather is nice today." },
+    { "post_id": "1", "text": "It’s a beautiful day outside." },
+    { "post_id": "2", "text": "What a lovely sunny afternoon!" },
+
+    { "post_id": "3", "text": "I enjoy reading books." },
+    { "post_id": "4", "text": "Books are a great way to learn." },
+    { "post_id": "5", "text": "Reading novels is one of my favorite hobbies." },
+
+    { "post_id": "6", "text": "I love eating pizza." },
+    { "post_id": "7", "text": "Pizza with extra cheese is my favorite." },
+    { "post_id": "8", "text": "Let's order some Italian food." },
+
+    { "post_id": "9", "text": "Artificial intelligence is changing the world." },
+    { "post_id": "10", "text": "Machine learning models can predict trends." },
+    { "post_id": "11", "text": "AI and data science are growing fields." },
+
+    { "post_id": "12", "text": "My cat knocked over a plant." },
+    { "post_id": "13", "text": "I need to buy a new pair of shoes." },
+    { "post_id": "14", "text": "The car engine is making a weird noise." }
+  ]
+}
