@@ -1,8 +1,8 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import List
-from src.services.embedding_service import generate_embeddings, store_embeddings
-from src.core.redis_client import redis_client
+from services.embedding_service import generate_embeddings, store_embeddings
+from core.redis_client import redis_client
 
 router = APIRouter()
 

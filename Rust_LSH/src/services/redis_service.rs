@@ -7,10 +7,12 @@ pub struct RedisService {
 }
 
 impl RedisService {
+    
     pub fn new(redis_url: &str) -> Result<Self, ApiError> {
         let client = Client::open(redis_url)?;
         Ok(Self { client })
     }
+
 
     pub async fn set(&self, key: &str, value: &str) -> Result<(), ApiError> {
         let mut conn = self.client.get_async_connection().await?;

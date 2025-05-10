@@ -2,6 +2,8 @@ use actix_web::{web, HttpResponse};
 use crate::{errors::ApiError, services::lsh_service::LSHService, services::redis_service::RedisService};
 use sha2::{Sha256, Digest};
 use serde::Deserialize;
+use futures::future::try_join_all;
+use std::collections::HashSet;
 
 #[derive(Deserialize)]
 pub struct QueryParams {
@@ -22,72 +24,96 @@ pub async fn add(
 pub async fn query(
     lsh: web::Data<LSHService>,
     redis_service: web::Data<RedisService>,
-    query: web::Json<Vec<f32>>,
+    query: web::Json<Vec<u32>>,
     params: web::Query<QueryParams>,
 ) -> Result<HttpResponse, ApiError> {
 
 
-    // Here we will recieve post_ids , fetch the vector from redis and then query the LSH 
+    let queries = query.into_inner();
 
-    let query = query.into_inner();
-    // Check if the query vector is empty
-    if query.is_empty() {
+    if queries.is_empty() {
         return Err(ApiError::BadRequest("Query vector is empty".to_string()));
     }
 
-    let vec_str = redis_service
-        .get(&format!("embedding:post:{}", query[0]))
+
+
+    // Prefetch all embeddings in parallel
+    let embedding_futures = queries.iter().map(|post_id| {
+        let key = format!("embedding:post:{}", post_id);
+        let key_clone = key.clone();  // Clone the String
+        let redis_service = redis_service.clone();  // Clone the RedisService
+        async move {  // `async move` takes ownership of key_clone
+            redis_service.get(&key_clone).await
+                .map_err(|e| ApiError::InternalServerError(format!("Redis fetch error: {}", e)))
+        }
+    });
+
+    let raw_embeddings: Vec<String> = try_join_all(embedding_futures)
         .await
-        .map_err(|e| ApiError::InternalServerError(format!("{}", e)))?;
+        .map_err(|e| ApiError::InternalServerError(format!("Redis fetch error: {}", e)))?;
 
+    // Query LSH for each vector
+    let mut hashed_results = HashSet::new(); // HashSet to avoid duplicates
 
+    for vec_str in raw_embeddings {
+        let embedding: Vec<f32> = serde_json::from_str(&vec_str)
+            .map_err(|e| ApiError::InternalServerError(format!("Failed to parse embedding: {}", e)))?;
 
-    let embedding: Vec<f32> = serde_json::from_str(&vec_str)
-    .map_err(|e| ApiError::InternalServerError(format!("Failed to parse embedding: {}", e)))?;
+        let results = lsh
+            .query(&embedding, params.n_results)
+            .map_err(|e| ApiError::InternalServerError(format!("LSH query error: {}", e)))?;
 
-// Convert to slice (&[f32])
-    let vec: &[f32] = &embedding;
-
-
-    let results = lsh
-        .query(&vec, params.n_results)
-        .map_err(|e| ApiError::InternalServerError(format!("{}",e)))?;
-
-
-    //Hash resulting vectors 
-    let mut hashed_results = Vec::new();
-    for vector in &results {
-        let hash = hash_vector(vector);
-        hashed_results.push(hash);
+        for vector in results {
+            hashed_results.insert(hash_vector(&vector));
+        }
     }
 
+    // Fetch post_ids in parallel using hashes
+    let post_id_futures = hashed_results.iter().map(|hash| {
+        let key = format!("post_from_embedding:{}", hash);
+        let redis_service = redis_service.clone();  // Clone the RedisService
+        async move {  // `async move` takes ownership of key
+            redis_service.get(&key)
+                .await
+                .map_err(|e| ApiError::InternalServerError(format!("Redis post_id fetch error: {}", e)))
+        }
+    });
 
+    let raw_post_ids: Vec<String> = try_join_all(post_id_futures)
+        .await
+        .map_err(|e| ApiError::InternalServerError(format!("Redis post_id fetch error: {}", e)))?;
+
+    // Deduplicate + skip self matches
+    let queries_set: HashSet<u32> = queries.into_iter().collect();
     let mut post_ids = Vec::new();
-    for hash in hashed_results {
-        let post_id = redis_service
-            .get(&format!("post_from_embedding:{}", hash))
-            .await
-            .map_err(|e| ApiError::InternalServerError(format!("{}", e)))?;
-        post_ids.push(post_id);
+
+    for id_str in raw_post_ids {
+        let id: u32 = id_str
+            .parse()
+            .map_err(|e| ApiError::InternalServerError(format!("Failed to parse post_id: {}", e)))?;
+
+        if !queries_set.contains(&id) && !post_ids.contains(&id) {
+            post_ids.push(id);
+        }
     }
 
 
-    let mut posts = Vec::new();
-    let query_post = redis_service
-        .get(&format!("post:{}", query[0]))
-        .await
-        .map_err(|e| ApiError::InternalServerError(format!("{}", e)))?;
-    posts.push(query_post);
-    for post_id in post_ids.iter() {
-        let post = redis_service
-            .get(&format!("post:{}", post_id))
-            .await
-            .map_err(|e| ApiError::InternalServerError(format!("{}", e)))?;
-        posts.push(post);
-    }
+    //let mut posts = Vec::new();
+    //let query_post = redis_service
+    //    .get(&format!("post:{}", query[0]))
+    //    .await
+    //    .map_err(|e| ApiError::InternalServerError(format!("{}", e)))?;
+    //posts.push(query_post);
+    //for post_id in post_ids.iter() {
+    //    let post = redis_service
+    //        .get(&format!("post:{}", post_id))
+    //        .await
+    //        .map_err(|e| ApiError::InternalServerError(format!("{}", e)))?;
+    //    posts.push(post);
+    //}
 
 
-    Ok(HttpResponse::Ok().json(posts))
+    Ok(HttpResponse::Ok().json(post_ids))
 }
 
 fn hash_vector(vector: &[f32]) -> String {
