@@ -4,3 +4,7 @@ Python_Embedder/venv
 Rust_LSH/target
 
 .env
+
+# __pycache__ directories
+
+__pycache__/
