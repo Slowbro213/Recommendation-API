@@ -144,11 +144,11 @@ async fn main() -> std::io::Result<()> {
 
     let running_flag = Arc::new(AtomicBool::new(true));
 
-    //{
-    //    let redis_url = redis_url.clone();
-    //    let lsh_service = lsh_service.clone();
-    //    startup(&redis_url, &lsh_service).expect("Failed to start up LSH service");
-    //}
+    {
+        let redis_url = redis_url.clone();
+        let lsh_service = lsh_service.clone();
+        startup(&redis_url, &lsh_service).expect("Failed to start up LSH service");
+    }
 
 
     {
