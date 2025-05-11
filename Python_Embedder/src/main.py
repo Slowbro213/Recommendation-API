@@ -13,7 +13,7 @@ app = FastAPI()
 app.include_router(embeddings_router, prefix="/embeddings", tags=["embeddings"])
 
 # Async Redis client
-redis_client = aioredis.Redis(host=os.getenv("REDIS_HOST","localhost"), port=os.getenv("REDIS_PORT",6379), db=0)
+redis_client = aioredis.Redis(host=os.getenv("REDIS_HOST","redis"), port=os.getenv("REDIS_PORT",6379), db=0)
 
 async def handle_pubsub_messages():
     try:
@@ -85,7 +85,5 @@ async def shutdown_event():
 
 
 if __name__ == "__main__":
-    import uvicorn
-    port = int(os.getenv("PYTHON_PORT", 8000))  # default port 8000 if not set in .env
     uvicorn.run("main:app", host=os.getenv("PYTHON_API_HOST"), port=int(os.getenv("PYTHON_API_PORT")), reload=False)
 

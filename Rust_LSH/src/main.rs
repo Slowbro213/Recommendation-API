@@ -84,6 +84,7 @@ fn startup(redis_url: &str, lsh_service: &services::lsh_service::LSHService) -> 
 
     if keys.is_empty() {
         println!("No embedding keys found.");
+        println!("[Rust] LSH service startup complete");
         return Ok(());
     }
 
@@ -124,10 +125,12 @@ async fn main() -> std::io::Result<()> {
 
     let redis_url = format!("redis://{}:{}", redis_host, redis_port);
 
+    println!("[Rust] Redis URL: {}", redis_url);
+
     let redis_service = services::redis_service::RedisService::new(&redis_url)
         .expect("Failed to connect to Redis");
 
-    let base_url = env::var("BASE_URL").unwrap_or_else(|_| "127.0.0.1".into());
+    let base_url = env::var("RUST_API_HOST").unwrap_or_else(|_| "127.0.0.1".into());
     let port = env::var("RUST_API_PORT")
         .unwrap_or_else(|_| "8080".into())
         .parse::<u16>()
@@ -141,11 +144,11 @@ async fn main() -> std::io::Result<()> {
 
     let running_flag = Arc::new(AtomicBool::new(true));
 
-    {
-        let redis_url = redis_url.clone();
-        let lsh_service = lsh_service.clone();
-        startup(&redis_url, &lsh_service).expect("Failed to start up LSH service");
-    }
+    //{
+    //    let redis_url = redis_url.clone();
+    //    let lsh_service = lsh_service.clone();
+    //    startup(&redis_url, &lsh_service).expect("Failed to start up LSH service");
+    //}
 
 
     {
